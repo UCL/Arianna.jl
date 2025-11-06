@@ -7,11 +7,11 @@ struct SimpleHamiltonian
 end
 
 function U(h::SimpleHamiltonian, q::AbstractVector)
-    h.logdensity(q)
+    -h.logdensity(q)
 end
 
 function ∇U(h::SimpleHamiltonian, q::AbstractVector)
-    h.gradlogdensity(q)
+    -h.gradlogdensity(q)
 end
 
 function K(h::SimpleHamiltonian, p::AbstractVector)
