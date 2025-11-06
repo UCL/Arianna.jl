@@ -2,7 +2,7 @@ using Arianna
 using Test
 using AbstractMCMC, Random
 using LogDensityProblems
-using Distributions
+using Distributions: logpdf, MvNormal
 using LinearAlgebra
 
 
@@ -13,27 +13,27 @@ using LinearAlgebra
     rng = Random.default_rng()
 
     println("Initial position: ")
-    function log_density(params):: Float64
-        data = rand(Normal(0, 1), 300)
+    function log_density(params)
+        # data = rand(Normal(0, 1), 300)
         println("Evaluating log density at params: ")
         I_test = Matrix{Float64}(I, d, d)
         println("Using MvNormal with mean zeros and identity covariance.")
-        # identity = Distributions::logpdf(MvNormal(zeros(Float64, d), I_test), params)
-
-        println("Log density value: ", identity)
-        return identit
+        return logpdf(MvNormal(zeros(Float64, d), I_test), params)
     end
 
+    # TODO I'm doing something stupid with this log density stuff. Needs help
+    struct MyLogDensity
+        dim::Int
+    end
     # https://github.com/TuringLang/AbstractMCMC.jl/blob/390012ece352b90969c80979941b5b6eba990d29/src/logdensityproblems.jl#L1-L12
     # examples here
     # https://github.com/TuringLang/AdvancedHMC.jl/blob/main/test/common.jl
-    LogDensityProblems.dimension(::typeof(log_density)) = 2
-    LogDensityProblems.logdensity(::typeof(log_density), θ) = log_density(θ)
-    function LogDensityProblems.capabilities(::Type{typeof(log_density)})
+    LogDensityProblems.dimension(m::MyLogDensity) = m.dim
+    LogDensityProblems.logdensity(::MyLogDensity, θ) = log_density(θ)
+    function LogDensityProblems.capabilities(::Type{MyLogDensity})
         return LogDensityProblems.LogDensityOrder{0}()
     end    
     
-    # struct DefaultModel <: AbstractMCMC.LogDensityModel end
     model = AbstractMCMC.LogDensityModel(log_density)
     println("LogDensityModel created.")
 
@@ -43,7 +43,7 @@ using LinearAlgebra
     
     end
 
-    function AbstractMCMC.step(rng::AbstractRNG, model::AbstractMCMC.LogDensityModel, sampler::RWMSampler)
+    function AbstractMCMC.step(rng::AbstractRNG, model::AbstractMCMC.LogDensityModel{MyLogDensity}, sampler::RWMSampler)
     
         # Random Walk Metropolis step
         proposal = sampler.position .+ 0.5 .* randn(rng, length(sampler.position)) # this code assumes a normal Gaussian, symmetric
@@ -62,7 +62,7 @@ using LinearAlgebra
             new_position = sampler.position
         end
     
-        return (RWMSampler(new_position), AbstractMCMC.LogDensityStats(logp_current))
+        return (RWMSampler(new_position), logp_current)
     
     end
 
