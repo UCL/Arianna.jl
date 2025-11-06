@@ -12,12 +12,16 @@ using LinearAlgebra
     θ_init = randn(Float64, d)
     rng = Random.default_rng()
 
+    println("Initial position: ")
     function log_density(params):: Float64
-        # data = rand(Normal(0, 1), 300)
-
+        data = rand(Normal(0, 1), 300)
+        println("Evaluating log density at params: ")
         I_test = Matrix{Float64}(I, d, d)
+        println("Using MvNormal with mean zeros and identity covariance.")
+        # identity = Distributions::logpdf(MvNormal(zeros(Float64, d), I_test), params)
 
-        return Distributions::logpdf(MvNormal(zeros(Float64, d), I_test), params)
+        println("Log density value: ", identity)
+        return identit
     end
 
     # https://github.com/TuringLang/AbstractMCMC.jl/blob/390012ece352b90969c80979941b5b6eba990d29/src/logdensityproblems.jl#L1-L12
@@ -31,7 +35,7 @@ using LinearAlgebra
     
     # struct DefaultModel <: AbstractMCMC.LogDensityModel end
     model = AbstractMCMC.LogDensityModel(log_density)
-
+    println("LogDensityModel created.")
 
     struct RWMSampler <: AbstractMCMC.AbstractSampler 
     
@@ -44,8 +48,11 @@ using LinearAlgebra
         # Random Walk Metropolis step
         proposal = sampler.position .+ 0.5 .* randn(rng, length(sampler.position)) # this code assumes a normal Gaussian, symmetric
     
-        logp_current = (model.logdensity(sampler.position))
-        logp_proposal = (model.logdensity(proposal))
+        println("Proposed position: ")
+        logp_current = model.logdensity(sampler.position)
+        println("Current log density: ")
+        logp_proposal = model.logdensity(proposal)
+        println("Proposed log density: ")
     
         log_accept_ratio = logp_proposal - logp_current
     
