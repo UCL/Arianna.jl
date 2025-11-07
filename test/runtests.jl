@@ -30,11 +30,13 @@ using LinearAlgebra
     # https://github.com/TuringLang/AdvancedHMC.jl/blob/main/test/common.jl
     LogDensityProblems.dimension(m::MyLogDensity) = m.dim
     LogDensityProblems.logdensity(::MyLogDensity, θ) = log_density(θ)
+    
     function LogDensityProblems.capabilities(::Type{MyLogDensity})
         return LogDensityProblems.LogDensityOrder{0}()
     end    
     
-    model = AbstractMCMC.LogDensityModel(log_density)
+    problem = MyLogDensity(d)
+    model = AbstractMCMC.LogDensityModel(problem)
     println("LogDensityModel created.")
 
     struct RWMSampler <: AbstractMCMC.AbstractSampler 
@@ -42,6 +44,9 @@ using LinearAlgebra
         position  # position vector ... this needs to be coupled to the dimension of the 'problem'
     
     end
+
+    @show typeof(model)
+    @show hasmethod(LogDensityProblems.logdensity, Tuple{typeof(model), Vector{Float64}})
 
     function AbstractMCMC.step(rng::AbstractRNG, model::AbstractMCMC.LogDensityModel{MyLogDensity}, sampler::RWMSampler)
     
