@@ -6,63 +6,46 @@ using LogDensityProblems
 using Random
 using AbstractMCMC
 using Plots
+using LinearAlgebra
 
-@testset "Test Step 1" begin
-    @show names(Arianna; all=true)
-    @show names(Arianna.RandomWalk; all=true)
-
-    m = RandomWalk.DistributionModel(Normal(0, 1))
-
-    @test LogDensityProblems.logdensity(m, 0.0) isa Float64
-    @test LogDensityProblems.logdensity(m, 0.0) ≈ logpdf(Normal(0, 1), 0.0)
-
-end
-
-@testset "Test Step 2" begin
-    start_point = 0.0
-    s = RandomWalk.RWSampler(start_point, 0.1)
-
-    @test s.position == 0.0
-    @test s.stepsize == 0.1
-end
-
-@testset "Test Step 3" begin
+@testset "Multidimensional Random Walk" begin
     rng = Random.default_rng()
 
-    model = RandomWalk.DistributionModel(Normal(0, 1))
-    s0 = RandomWalk.RWSampler(0.0, 0.1)
+    # 2D Gaussian
+    dist = MvNormal([0.0, 0.0], I(2))
+    model = RandomWalk.DistributionModel(dist)
 
-    s1, ll = AbstractMCMC.step(rng, model, s0)
+    # Initial sampler
+    s0 = RandomWalk.RWSampler([0.0, 0.0], 0.1)
+    @test s0.position isa Vector{Float64}
+    @test length(s0.position) == 2
 
-    @test ll == LogDensityProblems.logdensity(model, s0.position)
-    @test isa(s1.position, Float64)
-    @test s1.stepsize == 0.1
-end
+    # One step
+    s1, logp = AbstractMCMC.step(rng, model, s0)
+    @test s1.position isa Vector{Float64}
+    @test length(s1.position) == 2
+    @test logp isa Float64
 
-@testset "Test Step 4" begin
-    rng = Random.default_rng()
-
-    model = RandomWalk.DistributionModel(Normal(0, 1))
-    s0 = RandomWalk.RWSampler(0.0, 0.1)
-
+    # Multiple samples
     samples = AbstractMCMC.sample(rng, model, s0, 100)
-    # println("DEBUG samples = ", samples)
-    # println("DEBUG type(samples) = ", typeof(samples))
-    # println("DEBUG map(typeof, samples) = ", map(typeof, samples))
+    @test samples isa Matrix{Float64}
+    @test size(samples) == (100, 2)
 
+    # # Plot each dimension separately
+    # x = samples[:,1]
+    # y = samples[:,2]
+    # t = 1:size(samples,1)
 
-    @test length(samples) == 100
-    @test all(x -> isa(x, Float64), samples)
+    # p = plot3d(x, y, t,
+    # xlabel = "x₁",
+    # ylabel = "x₂",
+    # zlabel = "Step",
+    # title = "3D Random Walk Trajectory",
+    # linealpha = 5,
+    # legend = false)
+
+    # savefig("trace_mv.png")
 end
 
-@testset "Visual Test" begin
-    rng = Random.default_rng()
-    model = RandomWalk.DistributionModel(Normal(0, 1))
-    s0 = RandomWalk.RWSampler(0.0, 0.1)
 
-    samples = AbstractMCMC.sample(rng, model, s0, 500)
 
-    p = plot(samples, title="Random Walk Trace")
-    savefig("trace.png")
-    # println("Plot saved to trace.png")
-end

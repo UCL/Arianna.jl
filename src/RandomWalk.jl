@@ -13,12 +13,12 @@ end
 LogDensityProblems.logdensity(model::DistributionModel, x) = 
     logpdf(model.dist, x)
 
-LogDensityProblems.dimension(model::DistributionModel) = 1
+LogDensityProblems.dimension(model::DistributionModel) = length(mean(model.dist))
 
 
 # Step 2 - Sampler
 struct RWSampler <: AbstractMCMC.AbstractSampler 
-    position::Float64
+    position::Vector{Float64}
     stepsize::Float64
 end
 
@@ -29,7 +29,7 @@ function AbstractMCMC.step(
     sampler::RWSampler
     )
 
-    proposal = sampler.position .+ sampler.stepsize .* randn(rng)
+    proposal = sampler.position .+ sampler.stepsize .* randn(rng, length(sampler.position))
 
     logp_current = LogDensityProblems.logdensity(model, sampler.position)
     logp_proposal = LogDensityProblems.logdensity(model, proposal)
@@ -63,12 +63,14 @@ function AbstractMCMC.sample(
     kwargs...
     )
 
-    samples = Vector{Float64}(undef, n_samples)
+    d = length(sampler.position)
+    samples = Matrix{Float64}(undef, n_samples, d)
+
     current_sampler = sampler 
 
     for i in 1:n_samples
         current_sampler, logp = AbstractMCMC.step(rng, model, current_sampler)
-        samples[i] = current_sampler.position
+        samples[i, :] = current_sampler.position
     end
 
     return samples
