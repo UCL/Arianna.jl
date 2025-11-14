@@ -12,23 +12,26 @@ M = [1.0 0.0; 0.0 1.0;]
 H = SimpleHamiltonian(m_logdensity, m_gradlogdensity, M)
 integrator = LeapfrogIntegrator(H, 0.01, 0.5)
 
-samples, accepts= sample_chain(H, integrator, [5.0, 5.0], 200)
+samples, accepts = sample_chain(H, integrator, [5.0, 5.0], 200)
 
-f(x,y) = exp(m_logdensity([x,y]))
+f(x, y) = exp(m_logdensity([x, y]))
 
-xrange = range(-5, 5, length=200)
-yrange = range(-5, 5, length=200)
+xrange = range(-5, 5, length = 200)
+yrange = range(-5, 5, length = 200)
 
-contour(xrange, yrange, (x, y) -> f(x, y),
+contour(
+    xrange,
+    yrange,
+    (x, y) -> f(x, y),
     xlabel = "x₁",
     ylabel = "x₂",
     title = "Contour of Target Density",
     aspect_ratio = 1,
     fill = true,
     color = :viridis,
-    levels = 15
+    levels = 15,
 )
 
-plot!(samples[:, 1], samples[:, 2], title="Trace Plot", ms=1)
+plot!(samples[:, 1], samples[:, 2], title = "Trace Plot", ms = 1)
 
 savefig("traceplot.png")
