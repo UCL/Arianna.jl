@@ -1,80 +1,68 @@
-using Arianna
 using Test
-using AbstractMCMC, Random
+using Arianna
+import Arianna.RandomWalk
+using Distributions
 using LogDensityProblems
-using Distributions: logpdf, MvNormal
-using LinearAlgebra
+using Random
+using AbstractMCMC
+using Plots
 
+@testset "Test Step 1" begin
+    @show names(Arianna; all=true)
+    @show names(Arianna.RandomWalk; all=true)
 
-@testset "Can initialize RandomWalk State Sampler" begin
+    m = RandomWalk.DistributionModel(Normal(0, 1))
 
-    d = 2
-    θ_init = randn(Float64, d)
+    @test LogDensityProblems.logdensity(m, 0.0) isa Float64
+    @test LogDensityProblems.logdensity(m, 0.0) ≈ logpdf(Normal(0, 1), 0.0)
+
+end
+
+@testset "Test Step 2" begin
+    start_point = 0.0
+    s = RandomWalk.RWSampler(start_point, 0.1)
+
+    @test s.position == 0.0
+    @test s.stepsize == 0.1
+end
+
+@testset "Test Step 3" begin
     rng = Random.default_rng()
 
-    println("Initial position: ")
-    function log_density(params)
-        # data = rand(Normal(0, 1), 300)
-        println("Evaluating log density at params: ")
-        I_test = Matrix{Float64}(I, d, d)
-        println("Using MvNormal with mean zeros and identity covariance.")
-        return logpdf(MvNormal(zeros(Float64, d), I_test), params)
-    end
+    model = RandomWalk.DistributionModel(Normal(0, 1))
+    s0 = RandomWalk.RWSampler(0.0, 0.1)
 
-    # TODO I'm doing something stupid with this log density stuff. Needs help
-    struct MyLogDensity
-        dim::Int
-    end
-    # https://github.com/TuringLang/AbstractMCMC.jl/blob/390012ece352b90969c80979941b5b6eba990d29/src/logdensityproblems.jl#L1-L12
-    # examples here
-    # https://github.com/TuringLang/AdvancedHMC.jl/blob/main/test/common.jl
-    LogDensityProblems.dimension(m::MyLogDensity) = m.dim
-    LogDensityProblems.logdensity(::MyLogDensity, θ) = log_density(θ)
-    
-    function LogDensityProblems.capabilities(::Type{MyLogDensity})
-        return LogDensityProblems.LogDensityOrder{0}()
-    end    
-    
-    problem = MyLogDensity(d)
-    model = AbstractMCMC.LogDensityModel(problem)
-    println("LogDensityModel created.")
+    s1, ll = AbstractMCMC.step(rng, model, s0)
 
-    struct RWMSampler <: AbstractMCMC.AbstractSampler 
-    
-        position  # position vector ... this needs to be coupled to the dimension of the 'problem'
-    
-    end
+    @test ll == LogDensityProblems.logdensity(model, s0.position)
+    @test isa(s1.position, Float64)
+    @test s1.stepsize == 0.1
+end
 
-    @show typeof(model)
-    @show hasmethod(LogDensityProblems.logdensity, Tuple{typeof(model), Vector{Float64}})
+@testset "Test Step 4" begin
+    rng = Random.default_rng()
 
-    function AbstractMCMC.step(rng::AbstractRNG, model::AbstractMCMC.LogDensityModel{MyLogDensity}, sampler::RWMSampler)
-    
-        # Random Walk Metropolis step
-        proposal = sampler.position .+ 0.5 .* randn(rng, length(sampler.position)) # this code assumes a normal Gaussian, symmetric
-    
-        println("Proposed position: ")
-        logp_current = model.logdensity(sampler.position)
-        println("Current log density: ")
-        logp_proposal = model.logdensity(proposal)
-        println("Proposed log density: ")
-    
-        log_accept_ratio = logp_proposal - logp_current
-    
-        if log(rand(rng)) < log_accept_ratio
-            new_position = proposal
-        else
-            new_position = sampler.position
-        end
-    
-        return (RWMSampler(new_position), logp_current)
-    
-    end
+    model = RandomWalk.DistributionModel(Normal(0, 1))
+    s0 = RandomWalk.RWSampler(0.0, 0.1)
 
-    sampler = AbstractMCMC.Sample(rng, model, RWMSampler(θ_init)) 
-    
-    positions = collect(sampler(1:10))
-    println("RandomWalk State Sampler initialized and ran successfully.")
-    println("Final position: ", positions)
+    samples = AbstractMCMC.sample(rng, model, s0, 100)
+    # println("DEBUG samples = ", samples)
+    # println("DEBUG type(samples) = ", typeof(samples))
+    # println("DEBUG map(typeof, samples) = ", map(typeof, samples))
 
+
+    @test length(samples) == 100
+    @test all(x -> isa(x, Float64), samples)
+end
+
+@testset "Visual Test" begin
+    rng = Random.default_rng()
+    model = RandomWalk.DistributionModel(Normal(0, 1))
+    s0 = RandomWalk.RWSampler(0.0, 0.1)
+
+    samples = AbstractMCMC.sample(rng, model, s0, 500)
+
+    p = plot(samples, title="Random Walk Trace")
+    savefig("trace.png")
+    # println("Plot saved to trace.png")
 end

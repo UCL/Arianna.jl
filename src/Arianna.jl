@@ -1,6 +1,6 @@
 module Arianna
 
-# Write your package code here.
+include("RandomWalk.jl")
+using .RandomWalk
 
-println("Hellow world!")
 end
