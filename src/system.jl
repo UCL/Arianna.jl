@@ -1,101 +1,98 @@
-# Hamiltonian systems representing energy functions and their derivatives
+# ========================================================
+# Abstract System Type
+# ========================================================
 
 """
     AbstractSystem
 
-Base abstract type for Hamiltonian systems. The Hamiltonian defines a system of equations 
-which govern the dynamics of a physical system in terms of its position and momentum. These
-systems are assumed to have the form:
+Base abstract type for Hamiltonian systems with energy
 
     H(q, p) = U(q) + K(q, p)
 
-where `U(q)` is the potential energy as a function of position `q`, and `K(q, p)` is the 
-kinetic energy as a function of position `q` and momentum `p`.
+All abstract systems provide:
 
-For Hamiltonian Monte Carlo methods, the potential energy `U(q)` is assumed to be the
-negative log-density of the target distribution.
-
-All AbstractSystems are assumed to contain methods:
-    - U(q): potential energy function
-    - ∇U(q): gradient of the potential energy function
+    U(H, q)      -- potential energy
+    ∇U(H, q)     -- gradient of potential energy
 """
 abstract type AbstractSystem end
 
-"""
-    PositionIndependentFlowSystem
-"""
-abstract type PositionIndependentFlowSystem <: AbstractSystem end
+U(H::AbstractSystem, q) = H.U(q)
+∇U(H::AbstractSystem, q) = H.∇U(q)
+
+K(H::AbstractSystem, p::AbstractVector) =
+    error("K(H, p) not implemented for $(typeof(H))")
+
+K(H::AbstractSystem, q::AbstractVector, p::AbstractVector) =
+    error("K(H, q, p) not implemented for $(typeof(H))")
+
+# ========================================================
+# Position-Independent Flow TRAIT
+# ========================================================
 
 """
-    EuclideanSystem
+    position_independent_flow(H)::Val{true/false}
 
-Abstract type for a Hamiltonian with a Euclidean metric on the position space. These are
-respresented with fixed positive definite mass matrices M, which parameterize the kinetic 
-energy as a zero mean Gaussian distribution over momentum, independent of position.
-
-K(p) = 0.5 * p' * M^{-1} * p
+Trait indicating whether K(H, q, p) truly depends on q.
 """
+position_independent_flow(::AbstractSystem) = Val(false)
+
+
+generic_K(H::AbstractSystem, q::AbstractVector, p::AbstractVector) =
+    position_independent_flow(H) === Val(true) ?
+    K(H, p) :
+    K(H, q, p)
+
+
+
+
+# ========================================================
+# Hamiltonian
+# ========================================================
+
+hamiltonian(H::AbstractSystem, q, p) = U(H, q) + K(H, q, p)
+
+
+# ========================================================
+# Euclidean System (position-independent K)
+# ========================================================
+
 abstract type EuclideanSystem <: AbstractSystem end
 
 """
-    ConstrainedSystem
+    mass_matrix(H)
 
-Abstract type for a Hamiltonian with constraint on the position space. These position space
-is assumed to be a differentable manifold embedded in a higher dimensional Euclidean space.
+Euclidean systems must define a fixed positive-definite mass matrix.
 """
-abstract type ConstrainedSystem <: AbstractSystem end
+mass_matrix(H::EuclideanSystem) =
+    error("Euclidean systems must implement mass_matrix(H)")
 
-"""
-    RiemannianSystem
+# Declare trait:
+position_independent_flow(::EuclideanSystem) = Val(true)
 
-Abstract type for a Hamiltonian with a metric matrix representation of any generic type. The
-position space is assumed to be a Riemannian manifold with a metric with position dependent
-representation `M(q)`. The momentum is then the zero-mean Gaussian conditional distribution
-given position `q`: `p | q ~ N(0, M(q))`.
-"""
-abstract type RiemannianSystem <: AbstractSystem end
+# Implement position-independent K
+K(H::EuclideanSystem, p::AbstractVector) =
+    0.5 * dot(p, mass_matrix(H) \ p)
 
-"""
-    U(H::AbstractSystem, q::AbstractVector)
 
-Interface for potential energy..
-"""
-function U(H::AbstractSystem, q::AbstractVector)
-    H.U(q)
-end
+# ========================================================
+# Concrete Euclidean Hamiltonian
+# ========================================================
 
 """
-    ∇U(H::AbstractSystem, q::AbstractVector)
+    EuclideanHamiltonian(U, ∇U, M)
 
-Interface for gradient of potential energy.
+Concrete Euclidean Hamiltonian with fixed mass matrix M.
 """
-function ∇U(H::AbstractSystem, q::AbstractVector)
-    H.∇U(q)
+struct EuclideanHamiltonian{FU,FG,MType} <: EuclideanSystem
+    U::FU
+    ∇U::FG
+    M::MType
 end
 
-struct EuclideanHamiltonian{T<:Function} <: Intersection{EuclideanSystem,PositionIndependentFlowSystem}
-    U::T
-    ∇U::T
-    M::AbstractMetric
-end
+U(H::EuclideanHamiltonian, q) = H.U(q)
+∇U(H::EuclideanHamiltonian, q) = H.∇U(q)
+mass_matrix(H::EuclideanHamiltonian) = H.M
 
-struct GaussianEuclideanHamiltonian <: EuclideanHamiltonian
-    U::T
-    ∇U::T
-    M::AbstractMetric
-end
-
-function hamiltonian(H::AbstractSystem, q::AbstractVector, p::AbstractVector)
-    return U(H, q) + K(H, q, p)
-end
-
-function K(H <: PositionIndependentFlowSystem, _, p::AbstractVector)
-    K(H, p)
-end
-
-function K(H <: EuclideanSystem, p::AbstractVector)
-    0.5 * dot(p, inv(H.M) * p)
-end
 
 
 
