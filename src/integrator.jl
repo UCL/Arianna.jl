@@ -8,6 +8,7 @@ struct LeapfrogIntegrator <: Integrator
 end
 
 function leapfrog_step(h::SimpleHamiltonian, q::AbstractVector, p::AbstractVector, ε::Float64)
+    # In place p_half etc?
     p_half = p .- (ε / 2) * ∇U(h, q)
     q_new = q .+ ε * (inv(h.M) * p_half)
     p_new = p_half .- (ε / 2) * ∇U(h, q_new)

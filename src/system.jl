@@ -2,7 +2,7 @@
 
 struct SimpleHamiltonian
     logdensity::Function
-    gradlogdensity::Function
+    gradlogdensity::Function   #TODO autodiff
     M::AbstractMatrix
 end
 
