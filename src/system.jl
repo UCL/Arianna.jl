@@ -1,97 +1,78 @@
-# ========================================================
-# Abstract System Type
-# ========================================================
-
 """
     AbstractSystem
 
 Base abstract type for Hamiltonian systems with energy
+    H(q, p) = H₁(q) + H₂(q, p)
+where
+    q   --  current position
+    p   --  current momentum
+    H₁  --  potential energy
+    H₂  --  kinetric energy
 
-    H(q, p) = U(q) + K(q, p)
-
-All abstract systems provide:
-
-    U(H, q)      -- potential energy
-    ∇U(H, q)     -- gradient of potential energy
+All abstract systems must have fields:
+    neg_log_dens        --  function to calculate negative log density of the
+                            target function at the current position
+    grad_neg_log_dens   --  function to calculate gradient of the negative log density of 
+                            the target function at the current position
 """
 abstract type AbstractSystem end
 
-U(H::AbstractSystem, q) = H.U(q)
-∇U(H::AbstractSystem, q) = H.∇U(q)
+H(h::AbstractSystem, state::ChainState) = H₁(h, state) .+ H₂(h, state)
+H₁(h::AbstractSystem, state::ChainState) = h.neg_log_dens(state.q)
+H₂(h::AbstractSystem, state::ChainState) =
+    error("H₂(h, state) not implemented for $(typeof(h))")
 
-K(H::AbstractSystem, p::AbstractVector) =
-    error("K(H, p) not implemented for $(typeof(H))")
+∂H∂q(h::AbstractSystem, state::ChainState) = ∂H₁∂q(h, state) .+ ∂H₂∂q(h, state)
+∂H₁∂q(h::AbstractSystem, state::ChainState) = h.grad_neg_log_dens(state.q)
+∂H₂∂q(h::AbstractSystem, state::ChainState) = 
+    error("∂H₂∂q(h, state) not implemented for $(typeof(h))")
 
-K(H::AbstractSystem, q::AbstractVector, p::AbstractVector) =
-    error("K(H, q, p) not implemented for $(typeof(H))")
+∂H∂p(h::AbstractSystem, state::ChainState) = ∂H₂∂p(h, state)
+∂H₂∂p(h::AbstractSystem, state::ChainState) = 
+    error("∂H₂∂p(h, state) not implemented for $(typeof(h))")
 
-# ========================================================
-# Position-Independent Flow TRAIT
-# ========================================================
+sample_p(h::AbstractSystem, rng::AbstractRNG) = error("sample_p(h, state) not implemented for $(typeof(h))")
 
-"""
-    position_independent_flow(H)::Val{true/false}
-
-Trait indicating whether K(H, q, p) truly depends on q.
-"""
-position_independent_flow(::AbstractSystem) = Val(false)
-
-
-generic_K(H::AbstractSystem, q::AbstractVector, p::AbstractVector) =
-    position_independent_flow(H) === Val(true) ?
-    K(H, p) :
-    K(H, q, p)
-
-
-
-
-# ========================================================
-# Hamiltonian
-# ========================================================
-
-hamiltonian(H::AbstractSystem, q, p) = U(H, q) + K(H, q, p)
-
-
-# ========================================================
-# Euclidean System (position-independent K)
-# ========================================================
-
-abstract type EuclideanSystem <: AbstractSystem end
+const DEFAULT_ZERO_VEC = Dict{DataType, Vector}()
 
 """
-    mass_matrix(H)
+    AbstractEuclideanSystem
 
-Euclidean systems must define a fixed positive-definite mass matrix.
+Base abstract type for Euclidean Hamiltonian systems. 
 """
-mass_matrix(H::EuclideanSystem) =
-    error("Euclidean systems must implement mass_matrix(H)")
+abstract type AbstractEuclideanSystem <: AbstractSystem end
 
-# Declare trait:
-position_independent_flow(::EuclideanSystem) = Val(true)
+∂H₂∂q(h::AbstractEuclideanSystem, state::ChainState) = cached_zeros(h)
 
-# Implement position-independent K
-K(H::EuclideanSystem, p::AbstractVector) =
-    0.5 * dot(p, mass_matrix(H) \ p)
-
-
-# ========================================================
-# Concrete Euclidean Hamiltonian
-# ========================================================
-
-"""
-    EuclideanHamiltonian(U, ∇U, M)
-
-Concrete Euclidean Hamiltonian with fixed mass matrix M.
-"""
-struct EuclideanHamiltonian{FU,FG,MType} <: EuclideanSystem
-    U::FU
-    ∇U::FG
-    M::MType
+function cached_zeros(h::AbstractEuclideanSystem)
+    T = typeof(h)
+    get!(DEFAULT_ZERO_VEC, T) do
+        zeros(h.dimension)
+    end
 end
 
-U(H::EuclideanHamiltonian, q) = H.U(q)
-∇U(H::EuclideanHamiltonian, q) = H.∇U(q)
-mass_matrix(H::EuclideanHamiltonian) = H.M
+"""
+    EuclideanSystem
+
+Composite type for Euclidean Systems
+"""
+struct EuclideanSystem <: AbstractEuclideanSystem
+    neg_log_dens::Function
+    grad_neg_log_dens::Function
+    metric::AbstractPDMat
+end
+
+H₂(h::EuclideanSystem, state::ChainState) = Xt_invA_X(h.metric, state.p)
+∂H₂∂p(h::EuclideanSystem, state::ChainState) = h.metric \ state.p
+sample_p(h::EuclideanSystem, rng::AbstractRNG) = sqrt(h.metric) * randn(rng, size(h.metric, 1), 1)
+
+"""
+    AbstractRiemannianSystem
+
+Base abstract type for Riemannian systems. 
+"""
+abstract type AbstractRiemannianSystem <: AbstractSystem end
+
 
 
 

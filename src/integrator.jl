@@ -1,29 +1,25 @@
 # Integrator methods for solving discretized hamiltonian systems
-abstract type Integrator end
+abstract type AbstractIntegrator end
 
-struct LeapfrogIntegrator <: Integrator
-    h::SimpleHamiltonian
+struct LeapfrogIntegrator <: AbstractIntegrator
+    h::AbstractEuclideanSystem
     ε::Float64
     T::Float64
 end
 
-function leapfrog_step(
-    h::SimpleHamiltonian,
-    q::AbstractVector,
-    p::AbstractVector,
+function leapfrog_step!(
+    h::AbstractEuclideanSystem,
+    state::ChainState,
     ε::Float64,
 )
-    p_half = p .- (ε / 2) * ∇U(h, q)
-    q_new = q .+ ε * (inv(h.M) * p_half)
-    p_new = p_half .- (ε / 2) * ∇U(h, q_new)
-    return q_new, p_new
+    state.p .-= (ε/2) .* ∂H₁∂q(h, state)
+    state.q .+= ε .* ∂H₂∂p(h, state)
+    state.p .-= (ε/2) .* ∂H₁∂q(h, state)
 end
 
-function integrate(LI::LeapfrogIntegrator, q0::AbstractVector, p0::AbstractVector)
-    L = convert(UInt64, floor(LI.T / LI.ε))
-    q, p = q0, p0
+function integrate!(lfi::LeapfrogIntegrator, state::ChainState)
+    L = convert(UInt64, floor(lfi.T / lfi.ε))
     for n = 1:L
-        q, p = leapfrog_step(LI.h, q, p, LI.ε)
+        leapfrog_step!(lfi.h, state, lfi.ε)
     end
-    return q, p
 end

@@ -1,9 +1,17 @@
-abstract type Transition end
+abstract type AbstractTransition end
 
-struct IndependentMomentumTransition <: Transition
-    H::GaussianEuclideanHamiltonian
+struct IndependentMomentumTransition <: AbstractTransition
+    h::AbstractSystem
 end
 
-function sample(t::IndependentMomentumTransition)
-    randn(size(t.H.M, 1))
+struct CorrelatedMomentumTransition <: AbstractTransition
+    h::AbstractSystem
+    state::ChainState
+    resample_coefficient::Float64
+    function CorrelatedMomentumTransition(h, state, resample_coefficient)
+        @assert 0.0 ≤ resample_coefficient ≤ 1.0
+        new(h, state, resample_coefficient)
+    end
 end
+
+sample(transition::IndependentMomentumTransition) = sample_p(transition.h)

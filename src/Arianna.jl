@@ -1,11 +1,19 @@
 module Arianna
 
-include("autodiff.jl")
+using Random
+using PDMats
+using Distributions
+
+include("utils.jl")
+
+include("state.jl")
+export ChainState
+
 include("system.jl")
-export SimpleHamiltonian
+export EuclideanSystem
 
 include("integrator.jl")
-export LeapfrogIntegrator
+export LeapfrogIntegrator, AbstractIntegrator
 
 include("sample.jl")
 export sample_chain
