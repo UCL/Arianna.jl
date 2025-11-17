@@ -7,11 +7,7 @@ struct LeapfrogIntegrator <: AbstractIntegrator
     T::Float64
 end
 
-function leapfrog_step!(
-    h::AbstractEuclideanSystem,
-    state::ChainState,
-    ε::Float64,
-)
+function leapfrog_step!(h::AbstractEuclideanSystem, state::ChainState, ε::Float64)
     state.p .-= (ε/2) .* ∂H₁∂q(h, state)
     state.q .+= ε .* ∂H₂∂p(h, state)
     state.p .-= (ε/2) .* ∂H₁∂q(h, state)

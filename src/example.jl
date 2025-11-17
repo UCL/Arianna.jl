@@ -36,6 +36,6 @@ contour(
     levels = 15,
 )
 
-scatter!(samples[:, 1], samples[:, 2], title = "Trace Plot", ms=3)
+scatter!(samples[:, 1], samples[:, 2], title = "Trace Plot", ms = 3)
 
 savefig("traceplot.png")

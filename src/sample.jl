@@ -3,7 +3,7 @@ function hmc_step(
     h::AbstractSystem,
     integrator::AbstractIntegrator,
     q₁::AbstractMatrix,
-    rng::AbstractRNG
+    rng::AbstractRNG,
 )
     p₁ = sample_p(h, rng)
     state = ChainState(q₁, p₁)
@@ -26,7 +26,7 @@ function sample_chain(
     integrator::AbstractIntegrator,
     q₁::AbstractMatrix,
     N::Int,
-    rng::AbstractRNG
+    rng::AbstractRNG,
 )
     samples = zeros(eltype(q₁), N, length(q₁))
     accepts = BitVector(undef, N)
