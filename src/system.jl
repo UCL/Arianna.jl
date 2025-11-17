@@ -48,8 +48,6 @@ abstract type AbstractEuclideanSystem <: AbstractSystem end
 
 metric(h::AbstractEuclideanSystem) = h.metric
 
-∂H₂∂q(h::AbstractEuclideanSystem, state::ChainState) = cached_zeros(h)
-
 """
     EuclideanSystem
 
@@ -68,16 +66,8 @@ H₂(h::EuclideanSystem, state::ChainState) = Xt_invA_X(metric(h), state.p)
 sample_p(h::EuclideanSystem, rng::AbstractRNG) =
     sqrt(metric(h)) * randn(rng, size(metric(h), 1), 1)
 
-# Cache for zero vector corresponding to derivative of H₂ w.r.t. q, which is zero for 
-# position-independent metrics
-const DEFAULT_ZERO_VEC = Dict{DataType,Vector}()
-
-function cached_zeros(h::EuclideanSystem)
-    T = typeof(h)
-    get!(DEFAULT_ZERO_VEC, T) do
-        zeros(h.dimension)
-    end
-end
+# todo: implement cache
+∂H₂∂q(h::EuclideanSystem, state::ChainState) = zeros(size(metric(h), 1))
 
 """
     AbstractRiemannianSystem

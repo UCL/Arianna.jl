@@ -20,22 +20,22 @@ samples, accepts = sample_chain(h, integrator, [2.0; 2.0;;], 400, rng)
 
 f(x, y) = exp(-neg_log_dens([x; y;;]))
 
-xrange = range(-5, 5, length = 400)
-yrange = range(-5, 5, length = 400)
+xrange = range(-5, 5, length=400)
+yrange = range(-5, 5, length=400)
 
 contour(
     xrange,
     yrange,
     (x, y) -> f(x, y),
-    xlabel = "x₁",
-    ylabel = "x₂",
-    title = "Contour of Target Density",
-    aspect_ratio = 1,
-    fill = true,
-    color = :viridis,
-    levels = 15,
+    xlabel="x₁",
+    ylabel="x₂",
+    title="Contour of Target Density",
+    aspect_ratio=1,
+    fill=true,
+    color=:viridis,
+    levels=15,
 )
 
-scatter!(samples[:, 1], samples[:, 2], title = "Trace Plot", ms = 3)
+scatter!(samples[:, 1], samples[:, 2], title="Trace Plot", ms=3)
 
 savefig("traceplot.png")
