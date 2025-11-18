@@ -13,7 +13,7 @@ function hmc_step(
 
     accept_prob = exp(H(h, state) - H(h, proposed_state))[1]
 
-    if rand() < accept_prob
+    if rand(rng) < accept_prob
         return proposed_state.q, true
     else
         return state.q, false

@@ -4,8 +4,6 @@ using Random
 using PDMats
 using Distributions
 
-include("utils.jl")
-
 include("state.jl")
 export ChainState
 

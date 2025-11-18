@@ -7,7 +7,11 @@ struct LeapfrogIntegrator <: AbstractIntegrator
     T::Float64
 end
 
-function leapfrog_step!(h::AbstractEuclideanSystem, state::ChainState, ε::Float64)
+function step!(
+    h::AbstractEuclideanSystem,
+    state::ChainState,
+    ε::Float64,
+)
     state.p .-= (ε/2) .* ∂H₁∂q(h, state)
     state.q .+= ε .* ∂H₂∂p(h, state)
     state.p .-= (ε/2) .* ∂H₁∂q(h, state)
@@ -16,6 +20,6 @@ end
 function integrate!(lfi::LeapfrogIntegrator, state::ChainState)
     L = convert(UInt64, floor(lfi.T / lfi.ε))
     for n = 1:L
-        leapfrog_step!(lfi.h, state, lfi.ε)
+        step!(lfi.h, state, lfi.ε)
     end
 end
