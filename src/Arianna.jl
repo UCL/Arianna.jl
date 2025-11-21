@@ -1,5 +1,6 @@
 module Arianna
 
-# Write your package code here.
+include("RandomWalk.jl")
+using .RandomWalk
 
 end
